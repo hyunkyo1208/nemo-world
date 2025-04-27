@@ -43,7 +43,7 @@ class Visit(db.Model):
 
 class LetterBlock(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     is_read = db.Column(db.Boolean, default=False)

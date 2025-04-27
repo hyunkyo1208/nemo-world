@@ -49,6 +49,52 @@ html, body {
   color: #555;
 }
 
+.copy-link-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  margin-bottom: 20px; /* 복사 버튼 아래 여백 */
+}
+
+.plus-button-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px; /* 플러스 버튼 위쪽 여백 */
+}
+
+.copy-button {
+  font-family: 'Pretendard', sans-serif;
+  background-color: #F2F2F2; /* 배경 색 */
+  color: #53594D; /* 짙은 회색 텍스트 */
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.15);
+}
+
+.copy-button:hover {
+  background-color: #F2F2F2; /* hover시 조금 진한 색으로 */
+  transform: translateY(-2px);
+}
+
+.plus-button {
+  background-color: transparent;
+  border: 2px solid #333;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.plus-button:hover {
+  background-color: #f0f0f0;
+}
+
 /* 편지 리스트 */
 .letter-list {
   margin-top: 0;
@@ -307,6 +353,16 @@ html, body {
   width: 100%;
   max-width: 420px;
   padding: 32px 24px;
+}
+
+.click-text {
+  margin-top: 8px;
+  font-size: 16px;
+  color: #666;
+  opacity: 0.8;
+  font-family: 'Pretendard', sans-serif;
+  user-select: none;
+  text-align: center;
 }
 
 /* -------------------- 회원가입 화면 -------------------- */

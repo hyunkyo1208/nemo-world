@@ -325,6 +325,37 @@ def write_letter(receiver_id):
     # 편지 작성 화면은 필요한 추가 데이터(예: 색상 팔레트 등)가 있을 경우 함께 전달
     return render_template('write_letter.html', receiver=receiver)
 
+# 🔥 비회원/회원 모두 접근 가능한 새 편지 작성 라우트
+@app.route('/write_letter/<username>', methods=['GET', 'POST'])
+def write_letter_page(username):
+    receiver = User.query.filter_by(username=username).first_or_404()
+
+    if request.method == 'POST':
+        msg = request.form['message'].strip()
+        color = request.form.get('color', '#D9D9D9')
+        is_anon = True
+
+        if not msg:
+            flash('내용을 입력해주세요!', 'danger')
+            return redirect(request.url)
+
+        new_letter = LetterBlock(
+            sender_id=current_user.id if current_user.is_authenticated else None,
+            receiver_id=receiver.id,
+            message=msg,
+            color=color,
+            is_public=False,
+            is_anonymous=is_anon
+        )
+        db.session.add(new_letter)
+        db.session.commit()
+
+        flash('편지가 전송되었습니다!', 'success')
+        return redirect(url_for('public_profile', username=receiver.username))
+
+    return render_template('write_letter.html', receiver=receiver)
+
+
 # ─── 편지 상세 보기 ───
 @app.route('/letter_detail/<int:letter_id>', methods=['GET', 'POST'])
 @login_required
@@ -368,6 +399,24 @@ def toggle_letter_visibility(letter_id):
     return redirect(url_for('letter_detail', letter_id=letter_id))
 
 # ─── 프로필 ───
+# ─── 비회원용 공개 프로필 ───
+@app.route('/profile/username/<username>')
+def public_profile(username):
+    user = User.query.filter_by(username=username).first_or_404()
+
+    letters = []
+    if current_user.is_authenticated and current_user.id == user.id:
+        # 로그인한 본인이 자기 프로필을 볼 때만 편지 목록 보여줌
+        letters = LetterBlock.query.filter_by(receiver_id=user.id).order_by(LetterBlock.created_at.desc()).all()
+
+    return render_template('profile.html',
+                           user=user,
+                           letters=letters,
+                           friends=[],  # 친구 목록은 비회원에게는 보여줄 필요 없음 (필요 시 추가 가능)
+                           received_questions=[],  # 질문 리스트도 필요 없으면 비워둬
+                           today_visits=0)  # 방문자 수도 생략하거나 0으로
+
+
 @app.route('/profile/<int:user_id>', methods=['GET','POST'])
 @login_required
 def profile(user_id):

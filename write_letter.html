@@ -1,0 +1,17 @@
+<!-- templates/write_letter.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="letter-form">
+  <h2>{{ receiver.username }} 님에게 편지 쓰기 ✉️</h2>
+
+  <form method="POST">
+    <textarea name="message" rows="6" placeholder="하고 싶은 말을 적어주세요!" required></textarea><br><br>
+
+    <label>색상 선택:</label>
+    <input type="color" name="color" value="#D9D9D9"><br><br>
+
+    <button type="submit">편지 보내기 💌</button>
+  </form>
+</div>
+{% endblock %}

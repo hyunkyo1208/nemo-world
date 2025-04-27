@@ -12,41 +12,57 @@
 
   <div class="username">{{ user.username }}</div>
 
-  <div class="stats">
-    친구 수: <strong>{{ friends|length }}</strong> |
-    받은 편지 수: <strong>{{ letters|length }}</strong> |
-    오늘 방문자 수: <strong>{{ today_visits }}</strong>
-  </div>
+  {% if current_user.is_authenticated and current_user.id == user.id %}
+    <div class="stats">
+      친구 수: <strong>{{ friends|length }}</strong> |
+      받은 편지 수: <strong>{{ letters|length }}</strong> |
+      오늘 방문자 수: <strong>{{ today_visits }}</strong>
+    </div>
 
-  <a href="{{ url_for('write_letter', receiver_id=user.id) }}">
+    <!-- 🔥 내 프로필에만 보이는 질문 링크 복사 버튼 -->
+    <div class="copy-link-wrapper">
+      <input type="text" id="profileLink" value="{{ url_for('public_profile', username=user.username, _external=True) }}" readonly style="opacity:0; position:absolute;">
+      <button class="copy-button" onclick="copyProfileLink()">📋 링크 복사</button>
+    </div>
+  {% endif %}
+
+  <!-- 🔥 플러스 버튼 (회원/비회원 모두 보이게) -->
+<div class="plus-button-wrapper">
+  <a href="{{ url_for('write_letter_page', username=user.username) }}">
     <button class="plus-button">＋</button>
   </a>
 </div>
 
-<!-- ✅ 편지 리스트 -->
-<div class="letter-list">
-  {% for letter in letters %}
-    {% set can_open = (current_user.id == letter.receiver_id or current_user.id == letter.sender_id or letter.is_public) %}
+<!-- 🔥 편지 리스트 -->
+{% if current_user.is_authenticated and current_user.id == user.id %}
+  <div class="letter-list">
+    {% for letter in letters %}
+      {% set can_open = (current_user.id == letter.receiver_id or current_user.id == letter.sender_id or letter.is_public) %}
 
-    {% if can_open %}
-      <a href="{{ url_for('letter_detail', letter_id=letter.id) }}" class="letter-item">
-    {% else %}
-      <div class="letter-item disabled-letter" title="비공개 편지는 열람할 수 없어요">
-    {% endif %}
-    
-      <div id="icon-{{ letter.id }}" class="letter-icon"></div>
-    
-    {% if can_open %}
-      </a>
-    {% else %}
-      </div>
-    {% endif %}
-  {% endfor %}
-</div>
+      {% if can_open %}
+        <a href="{{ url_for('letter_detail', letter_id=letter.id) }}" class="letter-item">
+      {% else %}
+        <div class="letter-item disabled-letter" title="비공개 편지는 열람할 수 없어요">
+      {% endif %}
+      
+        <div id="icon-{{ letter.id }}" class="letter-icon"></div>
+
+      {% if can_open %}
+        </a>
+      {% else %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="login-required">
+    <p>📢 편지를 보려면 로그인 해주세요!</p>
+  </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}  {# ✅ base.html confirmDeleteAccount() 가져오기 #}
+{{ super() }}
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
@@ -67,44 +83,55 @@ document.addEventListener("DOMContentLoaded", () => {
       avatarDiv.innerHTML = coloredSvg;
     });
 
-  // ✅ 편지 아이콘 SVG 적용
-  const applySVG = (targetId, rawSvg, color) => {
-    const colored = rawSvg
-      .replace(/#D9D9D9|#FFFFFF/gi, color)
-      .replace(/<svg[^>]+>/, match =>
-        match.replace(/width="[^"]*"/, 'width="100px"')
-             .replace(/height="[^"]*"/, 'height="100px"')
-      );
-    document.getElementById(targetId).innerHTML = colored;
-  };
+  {% if current_user.is_authenticated and current_user.id == user.id and letters %}
+    // ✅ 편지 아이콘 SVG 적용 (로그인하고 내 프로필일 때만)
+    const applySVG = (targetId, rawSvg, color) => {
+      const colored = rawSvg
+        .replace(/#D9D9D9|#FFFFFF/gi, color)
+        .replace(/<svg[^>]+>/, match =>
+          match.replace(/width="[^"]*"/, 'width="100px"')
+               .replace(/height="[^"]*"/, 'height="100px"')
+        );
+      document.getElementById(targetId).innerHTML = colored;
+    };
 
-  {% for letter in letters %}
-    {% if not letter.is_public and not letter.is_read %}
-      fetch("/static/icons/envelope.svg")
-        .then(r => r.text())
-        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
+    {% for letter in letters %}
+      {% if not letter.is_public and not letter.is_read %}
+        fetch("/static/icons/envelope.svg")
+          .then(r => r.text())
+          .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
 
-    {% elif not letter.is_public and letter.is_read %}
-      fetch("/static/icons/qlrhdro.svg")
-        .then(r => r.text())
-        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
+      {% elif not letter.is_public and letter.is_read %}
+        fetch("/static/icons/qlrhdro.svg")
+          .then(r => r.text())
+          .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
 
-    {% elif letter.is_public and not letter.is_read %}
-      fetch("/static/icons/envelope.svg")
-        .then(r => r.text())
-        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
+      {% elif letter.is_public and not letter.is_read %}
+        fetch("/static/icons/envelope.svg")
+          .then(r => r.text())
+          .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
 
-    {% elif letter.is_public and letter.is_read and letter.is_anonymous %}
-      fetch("/static/icons/profile.svg")
-        .then(r => r.text())
-        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
+      {% elif letter.is_public and letter.is_read and letter.is_anonymous %}
+        fetch("/static/icons/profile.svg")
+          .then(r => r.text())
+          .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
 
-    {% elif letter.is_public and letter.is_read and not letter.is_anonymous %}
-      fetch("/static/avatars/{{ letter.sender.avatar_filename }}")
-        .then(r => r.text())
-        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.sender.avatar_color }}"));
-    {% endif %}
-  {% endfor %}
+      {% elif letter.is_public and letter.is_read and not letter.is_anonymous %}
+        fetch("/static/avatars/{{ letter.sender.avatar_filename }}")
+          .then(r => r.text())
+          .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.sender.avatar_color }}"));
+      {% endif %}
+    {% endfor %}
+  {% endif %}
 });
+
+// ✅ 복사 버튼 스크립트
+function copyProfileLink() {
+    var copyText = document.getElementById("profileLink");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // 모바일 대응
+    document.execCommand("copy");
+    alert("링크가 복사되었습니다! 📋 친구들에게 공유해 보세요.");
+}
 </script>
 {% endblock %}
