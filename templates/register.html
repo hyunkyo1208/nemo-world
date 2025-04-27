@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="register-full-wrapper">
+  <div class="register-form-area">
+    <h2 class="text-center mb-4"> 회원가입 </h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} text-center" role="alert">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="post">
+      <!-- 패시용자 키 입력 -->
+      <div class="mb-4">
+        <label for="userid" class="form-label text-start d-block">아이디</label>
+        <div class="d-flex gap-2">
+          <input type="text" name="userid" id="userid" class="form-control" required pattern="[A-Za-z0-9]{4,16}" title="영문+숫자 4~16자">
+          <button type="button" class="btn btn-outline-secondary" onclick="checkUserId()">중복 확인</button>
+        </div>
+        <div id="useridFeedback" class="form-text mt-1"></div>
+      </div>
+
+      <div class="mb-4">
+        <label for="username" class="form-label text-start d-block">이름</label>
+        <input type="text" name="username" id="username" class="form-control" required>
+      </div>
+
+      <div class="mb-4">
+        <label for="email" class="form-label text-start d-block">이메일</label>
+        <input type="email" name="email" id="email" class="form-control" required>
+      </div>
+
+      <div class="mb-4">
+        <label for="password" class="form-label text-start d-block">비밀번호</label>
+        <input type="password" name="password" id="password" class="form-control" required>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label text-start d-block">🌈 색상 선택</label>
+        <div class="advanced-color mt-2">
+          <input type="color" id="customColor" class="form-control form-control-color" value="#E6C69B">
+        </div>
+        <input type="hidden" name="avatarColor" id="avatarColorInput" value="#E6C69B">
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label text-start d-block">🐾 아바터 선택</label>
+        <div class="avatar-grid">
+          {% for avatar in avatars %}
+          <div class="avatar-option" onclick="selectAvatar('{{ avatar }}')">
+            <img src="{{ url_for('static', filename='avatars/' + avatar) }}" alt="avatar">
+          </div>
+          {% endfor %}
+        </div>
+        <input type="hidden" id="selectedAvatar" name="selectedAvatar">
+      </div>
+
+      <div class="preview-box text-center mt-4 mb-5">
+        <p class="mb-3">✨ 아바터 미리보기 ✨</p>
+        <div id="avatarPreview">
+          <svg id="avatarSvg" width="140" height="140"></svg>
+        </div>
+      </div>
+
+      <div class="form-group text-start mb-4" style="font-size: 0.95rem;">
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+          <label class="form-check-label" for="terms">
+            (필수) <a href="#" onclick="openModal('terms')">이용약관</a>에 동의합니다.
+          </label>
+        </div>
+
+        <div class="form-check mb-2">
+          <input class="form-check-input" type="checkbox" id="privacy" name="privacy" required>
+          <label class="form-check-label" for="privacy">
+            (필수) <a href="#" onclick="openModal('privacy')">개인정보 수집 및 이용</a>에 동의합니다.
+          </label>
+        </div>
+
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" id="marketing" name="marketing">
+          <label class="form-check-label" for="marketing">
+            (선택) 마케팅 정보 수신에 동의합니다.
+          </label>
+        </div>
+      </div>
+
+      <!-- 모달 찾 -->
+      <div id="modalBackground" class="modal-bg" style="display: none;">
+        <div class="modal-content">
+          <h4 id="modalTitle"></h4>
+          <div id="modalBody" class="modal-body-text"></div>
+          <button class="btn btn-secondary mt-3" onclick="closeModal()">닫기</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-custom w-100 mt-4">회원가입</button>
+      <p class="text-center mt-4" style="font-size: 17px;">이미 계정이 있습니까? <a href="{{ url_for('login') }}">로그인</a>
+      </p>
+    </form>
+  </div>
+</div>
+
+<script>
+function selectAvatar(avatar) {
+  document.getElementById("selectedAvatar").value = avatar;
+  fetch(`/static/avatars/${avatar}`)
+    .then(response => response.text())
+    .then(svgText => {
+      document.getElementById("avatarSvg").innerHTML = svgText;
+      applyColorToSvg(document.getElementById("customColor").value);
+    });
+}
+
+function applyColorToSvg(color) {
+  const svg = document.getElementById("avatarSvg").querySelector("svg");
+  if (!svg) return;
+  svg.querySelectorAll("[fill]").forEach(el => {
+    if (el.getAttribute("fill").toUpperCase() === "#D9D9D9") {
+      el.setAttribute("fill", color);
+    }
+  });
+}
+
+function checkUserId() {
+  const userid = document.getElementById('userid').value.trim();
+  const feedback = document.getElementById('useridFeedback');
+
+  if (!userid) {
+    feedback.textContent = "아이디를 입력해주세요.";
+    feedback.style.color = "red";
+    return;
+  }
+
+  fetch(`/check_userid?userid=${encodeURIComponent(userid)}`)
+    .then(res => res.json())
+    .then(data => {
+      feedback.textContent = data.exists ? "이미 사용 중인 아이디입니다." : "사용 가능한 아이디입니다!";
+      feedback.style.color = data.exists ? "red" : "green";
+    })
+    .catch(() => {
+      feedback.textContent = "오류가 발생했습니다.";
+      feedback.style.color = "red";
+    });
+}
+
+function openModal(type) {
+  const modal = document.getElementById('modalBackground');
+  const title = document.getElementById('modalTitle');
+  const body = document.getElementById('modalBody');
+
+  if (type === 'terms') {
+    title.innerText = "이용약관";
+    body.innerText = `1. 목적
+본 약관은 '네모의 세상' 서비스(이하 "서비스")의 이용 조건 및 절차를 규정함을 목적으로 합니다.
+
+2. 가입 및 이용 조건
+본 서비스는 만 14세 이상의 사용자만 이용할 수 있습니다.
+
+3. 이용자의 의무
+- 타인의 정보를 무단으로 사용하지 않습니다.
+- 서비스 이용 시 법령 및 공서양속을 준수해야 합니다.
+
+4. 회사의 권리와 책임
+회사는 서비스의 일부 또는 전부를 변경하거나 중단할 수 있으며, 이에 대해 별도의 보상을 하지 않습니다.
+
+5. 지적 재산권
+서비스 내 모든 콘텐츠에 대한 저작권 및 지적 재산권은 회사에 귀속됩니다.
+
+6. 분쟁 해결
+본 약관은 대한민국 법률에 따라 해석되며, 서비스와 관련된 분쟁은 서울중앙지방법원을 제1심 관할 법원으로 합니다.
+`;
+  } else if (type === 'privacy') {
+    title.innerText = "개인정보 수집 및 이용";
+    body.innerText = `1. 수집 항목
+- 필수 항목: 아이디, 비밀번호, 이름, 이메일, 아바타 설정 정보
+- 선택 항목: 마케팅 정보 수신 동의
+
+2. 수집 목적
+- 회원 식별 및 관리
+- 서비스 제공 및 개선
+- 사용자 맞춤형 서비스 제공
+
+3. 보유 및 이용 기간
+- 회원 탈퇴 시까지 보유 후 즉시 파기합니다.
+
+4. 동의 거부 권리 및 불이익
+- 개인정보 제공에 동의하지 않으실 수 있으나, 이 경우 회원가입 및 서비스 이용이 제한될 수 있습니다.
+`;
+  }
+  modal.style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modalBackground').style.display = 'none';
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const customColorInput = document.getElementById("customColor");
+  const hiddenInput = document.getElementById("avatarColorInput");
+
+  customColorInput.addEventListener("input", () => {
+    hiddenInput.value = customColorInput.value;
+  });
+});
+</script>
+
+{% endblock %}

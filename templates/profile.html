@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="profile-header">
+  <div class="avatar-wrapper">
+    <div id="userAvatarSvg" class="profile-avatar"></div>
+  </div>
+
+  <div class="username">{{ user.username }}</div>
+
+  <div class="stats">
+    친구 수: <strong>{{ friends|length }}</strong> |
+    받은 편지 수: <strong>{{ letters|length }}</strong> |
+    오늘 방문자 수: <strong>{{ today_visits }}</strong>
+  </div>
+
+  <a href="{{ url_for('write_letter', receiver_id=user.id) }}">
+    <button class="plus-button">＋</button>
+  </a>
+</div>
+
+<!-- ✅ 편지 리스트 -->
+<div class="letter-list">
+  {% for letter in letters %}
+    {% set can_open = (current_user.id == letter.receiver_id or current_user.id == letter.sender_id or letter.is_public) %}
+
+    {% if can_open %}
+      <a href="{{ url_for('letter_detail', letter_id=letter.id) }}" class="letter-item">
+    {% else %}
+      <div class="letter-item disabled-letter" title="비공개 편지는 열람할 수 없어요">
+    {% endif %}
+    
+      <div id="icon-{{ letter.id }}" class="letter-icon"></div>
+    
+    {% if can_open %}
+      </a>
+    {% else %}
+      </div>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}  {# ✅ base.html confirmDeleteAccount() 가져오기 #}
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  // ✅ 사용자 아바타 SVG 적용
+  const avatarDiv = document.getElementById("userAvatarSvg");
+  const fname = "{{ user.avatar_filename }}";
+  const col = "{{ user.avatar_color }}";
+
+  fetch(`/static/avatars/${fname}`)
+    .then(r => r.text())
+    .then(svg => {
+      const coloredSvg = svg
+        .replace(/#D9D9D9|#FFFFFF/gi, col)
+        .replace(/<svg[^>]+>/, match => 
+          match.replace(/width="[^"]*"/, 'width="240px"')
+               .replace(/height="[^"]*"/, 'height="240px"')
+        );
+      avatarDiv.innerHTML = coloredSvg;
+    });
+
+  // ✅ 편지 아이콘 SVG 적용
+  const applySVG = (targetId, rawSvg, color) => {
+    const colored = rawSvg
+      .replace(/#D9D9D9|#FFFFFF/gi, color)
+      .replace(/<svg[^>]+>/, match =>
+        match.replace(/width="[^"]*"/, 'width="100px"')
+             .replace(/height="[^"]*"/, 'height="100px"')
+      );
+    document.getElementById(targetId).innerHTML = colored;
+  };
+
+  {% for letter in letters %}
+    {% if not letter.is_public and not letter.is_read %}
+      fetch("/static/icons/envelope.svg")
+        .then(r => r.text())
+        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
+
+    {% elif not letter.is_public and letter.is_read %}
+      fetch("/static/icons/qlrhdro.svg")
+        .then(r => r.text())
+        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
+
+    {% elif letter.is_public and not letter.is_read %}
+      fetch("/static/icons/envelope.svg")
+        .then(r => r.text())
+        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
+
+    {% elif letter.is_public and letter.is_read and letter.is_anonymous %}
+      fetch("/static/icons/profile.svg")
+        .then(r => r.text())
+        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.color }}"));
+
+    {% elif letter.is_public and letter.is_read and not letter.is_anonymous %}
+      fetch("/static/avatars/{{ letter.sender.avatar_filename }}")
+        .then(r => r.text())
+        .then(svg => applySVG("icon-{{ letter.id }}", svg, "{{ letter.sender.avatar_color }}"));
+    {% endif %}
+  {% endfor %}
+});
+</script>
+{% endblock %}

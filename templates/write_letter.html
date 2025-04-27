@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="letter-page-wrapper">
+  <div class="letter-form">
+    <h2>{{ receiver.username }}님께 편지 쓰기</h2>
+    <form method="post">
+      <div class="form-group">
+        <label>내용</label>
+        <textarea name="message" required></textarea>
+      </div>
+
+      <div class="form-group options">
+        <label>공개 설정:</label>
+        <label><input type="radio" name="is_public" value="1" checked> 모두에게 공개</label>
+        <label><input type="radio" name="is_public" value="0"> 본인·작성자만</label>
+      </div>
+
+      <div class="form-group options">
+        <label>작성자 표시:</label>
+        <label><input type="radio" name="is_anonymous" value="0" checked> 이름 표시</label>
+        <label><input type="radio" name="is_anonymous" value="1"> 익명</label>
+      </div>
+
+      <div class="form-group">
+        <label>색상 선택</label>
+        <input type="color" name="color" value="#E6C69B">
+      </div>
+
+      <button type="submit">전송하기</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

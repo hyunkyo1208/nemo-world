@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-4">
+  <h2 class="text-center mb-4">🌿 친구 목록 & 추가 🌿</h2>
+
+  <!-- 🔹 내 정보 -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5 class="card-title"><i class="bi bi-person-fill"></i> 내 정보</h5>
+      <p class="card-text">{{ user.username }} (@{{ user.userid }})</p>
+    </div>
+  </div>
+
+  <!-- 🔹 받은 친구 요청 -->
+  {% if friend_requests %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5 class="card-title"><i class="bi bi-envelope-heart-fill"></i> 받은 친구 요청</h5>
+      <ul class="list-group list-group-flush">
+        {% for fr in friend_requests %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{{ url_for('profile', user_id=fr[0]) }}" class="d-flex align-items-center text-decoration-none">
+            <div class="friend-avatar me-3" id="avatar-request-{{ fr[0] }}"></div>
+            <div>
+              <strong>{{ fr[1] }}</strong><br>  {# username #}
+              <small class="text-muted">@{{ fr[2] }}</small> {# userid #}
+            </div>
+          </a>
+          <div>
+            <button class="btn btn-success btn-sm me-2" onclick="respondRequest({{ fr[0] }}, 'accept')">수락</button>
+            <button class="btn btn-danger btn-sm" onclick="respondRequest({{ fr[0] }}, 'reject')">거절</button>
+          </div>
+        </li>        
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+    <!-- 🔹 친구 검색 -->
+    <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title"><i class="bi bi-search"></i> 친구 검색</h5>
+          <div class="input-group">
+            <input type="text" id="friend-search" class="form-control" placeholder="아이디 입력">
+            <button class="btn btn-primary" onclick="searchFriend()">검색</button>
+          </div>
+        </div>
+      </div>
+    
+      <!-- 🔹 검색 결과 -->
+      <div id="friend-results"></div>
+
+  <!-- 🔹 친구 목록 -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5 class="card-title"><i class="bi bi-people-fill"></i> 친구 목록</h5>
+      {% if friends %}
+      <ul class="list-group list-group-flush">
+        {% for friend in friends %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{{ url_for('profile', user_id=friend.id) }}" class="d-flex align-items-center text-decoration-none">
+            <div class="friend-avatar me-3" id="avatar-friend-{{ friend.id }}"></div>
+            <div>
+              <strong>{{ friend.username }}</strong><br>
+              <small class="text-muted">@{{ friend.userid }}</small>
+            </div>
+          </a>
+          <button class="btn btn-outline-danger btn-sm" onclick="removeFriend({{ friend.id }})">삭제</button>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-muted">아직 친구가 없습니다.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function searchFriend() {
+  let query = document.getElementById("friend-search").value.trim();
+  let resultsDiv = document.getElementById("friend-results");
+  if (!query) return;
+
+  fetch(`/search_friends?query=${encodeURIComponent(query)}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        let html = "<ul class='list-group mb-4'>";
+        data.friends.forEach(f => {
+          html += `
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="/profile/${f.id}" class="d-flex align-items-center text-decoration-none">
+              <div class="friend-avatar me-3" id="avatar-search-${f.id}"></div>
+              <div>
+                <strong>${f.username}</strong><br>
+                <small class="text-muted">@${f.userid}</small>
+              </div>
+            </a>
+            <button class="btn btn-outline-success btn-sm" onclick="addFriend(${f.id})">추가</button>
+          </li>`;
+        });
+        html += "</ul>";
+        resultsDiv.innerHTML = html;
+
+        data.friends.forEach(f => {
+          fetch(`/static/avatars/${f.avatar_filename}`)
+            .then(res => res.text())
+            .then(svg => {
+              const colored = svg
+                .replace(/#D9D9D9/gi, f.avatar_color || "#D9D9D9")
+                .replace(/<svg[^>]+>/, match => {
+                  return match.replace(/width="[^"]*"/, 'width="60px"')
+                               .replace(/height="[^"]*"/, 'height="60px"');
+                });
+              document.getElementById(`avatar-search-${f.id}`).innerHTML = colored;
+            });
+        });
+      } else {
+        resultsDiv.innerHTML = `<div class='text-muted'>${data.message}</div>`;
+      }
+    });
+}
+
+function addFriend(id) {
+  fetch(`/add_friend/${id}`, { method: "POST" })
+    .then(res => res.json())
+    .then(data => { alert(data.message); location.reload(); });
+}
+
+function removeFriend(id) {
+  fetch(`/remove_friend/${id}`, { method: "POST" })
+    .then(res => res.json())
+    .then(data => { alert(data.message); location.reload(); });
+}
+
+function respondRequest(id, action) {
+  fetch(`/respond_friend_request/${id}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // 👉 CSRF 보호 안 쓰는 경우 이 정도면 충분
+    },
+    body: JSON.stringify({ action: action })  // action: "accept" or "reject"
+  })
+  .then(res => {
+    if (!res.ok) throw new Error("요청 실패");
+    return res.json();
+  })
+  .then(data => {
+    alert(data.message);
+    location.reload();
+  })
+  .catch(err => {
+    alert("요청 중 오류가 발생했습니다.");
+    console.error(err);
+  });
+}
+
+// ✅ 아바타 로딩
+window.addEventListener("DOMContentLoaded", () => {
+  {% for friend in friends %}
+    fetch(`/static/avatars/{{ friend.avatar_filename }}`)
+      .then(res => res.text())
+      .then(svg => {
+        const colored = svg
+          .replace(/#D9D9D9/gi, "{{ friend.avatar_color }}")
+          .replace(/<svg[^>]+>/, match => {
+            return match.replace(/width="[^"]*"/, 'width="60px"')
+                         .replace(/height="[^"]*"/, 'height="60px"');
+          });
+        document.getElementById("avatar-friend-{{ friend.id }}").innerHTML = colored;
+      });
+  {% endfor %}
+  {% for fr in friend_requests %}
+    fetch(`/static/avatars/{{ fr.avatar_filename }}`)
+      .then(res => res.text())
+      .then(svg => {
+        const colored = svg
+          .replace(/#D9D9D9/gi, "{{ fr.avatar_color }}")
+          .replace(/<svg[^>]+>/, match => {
+            return match.replace(/width="[^"]*"/, 'width="60px"')
+                         .replace(/height="[^"]*"/, 'height="60px"');
+          });
+        document.getElementById("avatar-request-{{ fr.id }}").innerHTML = colored;
+      });
+  {% endfor %}
+});
+</script>
+
+{% endblock %}

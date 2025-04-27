@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>네모의 세상</title>
+
+  <!-- 부트스트랩 CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  {% block styles %}{% endblock %}
+</head>
+<body>
+
+  <!-- ✅ 상단 네비게이션 -->
+  {% if request.endpoint not in ['login', 'register'] %}
+  <nav class="navbar navbar-light bg-light fixed-top">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+      <span class="navbar-brand mb-0 h1">네모의 세상</span>
+      <div class="dropdown">
+        <button class="btn btn-light border-0" id="userMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-box-arrow-right" style="font-size: 1.8rem;"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuButton">
+          <li><a class="dropdown-item" href="/logout">로그아웃</a></li>
+          <li><button class="dropdown-item text-danger" onclick="confirmDeleteAccount()">회원 탈퇴</button></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  {% endif %}
+
+  <!-- ✅ 페이지 내용 -->
+  {% if request.endpoint == 'home' %}
+    <div class="home-container">
+  {% else %}
+    <div class="w-100 d-flex flex-column align-items-center justify-content-center" style="padding-top: 4rem; padding-bottom: 4rem;">
+  {% endif %}
+
+  {% block content %}{% endblock %}
+
+  </div>
+
+  <!-- ✅ 하단 네비게이션 -->
+  {% if request.endpoint not in ['login', 'register'] %}
+  <nav class="navbar navbar-light bg-light fixed-bottom">
+    <div class="container d-flex justify-content-around">
+      {% if current_user.is_authenticated %}
+      <a href="{{ url_for('profile', user_id=current_user.id) }}" class="text-center text-dark text-decoration-none">
+        <i class="bi bi-person" style="font-size: 1.5rem;"></i><br> 프로필
+      </a>
+      <a href="{{ url_for('friends_page') }}" class="text-center text-dark text-decoration-none">
+        <i class="bi bi-people" style="font-size: 1.5rem;"></i><br> 친구
+      </a>
+      {% endif %}
+    </div>
+  </nav>
+  {% endif %}
+
+  <!-- ✅ 필수 JS 로드 -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- ✅ 개별 페이지 스크립트 삽입 지점 -->
+  {% block scripts %}
+  <script>
+    function confirmDeleteAccount() {
+      if (confirm("정말로 회원 탈퇴하시겠습니까? 🥲")) {
+        fetch("/delete_account", { method: "POST" })
+          .then(response => {
+            if (response.ok) {
+              alert("회원 탈퇴가 완료되었습니다.");
+              setTimeout(() => {
+                window.location.href = "/";
+              }, 500);  // 
+            } else {
+              alert("오류가 발생했습니다. 다시 시도해주세요.");
+            }
+          })
+          .catch(() => {
+            alert("서버와 통신 중 오류가 발생했습니다.");
+          });
+      }
+    }
+  </script>
+  {% endblock %}
+
+</body>
+</html>

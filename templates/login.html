@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="login-intro-container" onclick="startLoginTransition()">
+  <div class="avatar-center">
+    <img src="{{ url_for('static', filename='icons/profile.svg') }}" alt="아바타" class="avatar-image" id="avatarImage">
+    <div class="circle-animation" id="circleAnim"></div>
+  </div>
+</div>
+
+<div class="login-form-wrapper" id="loginFormWrapper" style="display: none;">
+  <div class="login-form-area">
+    <h1 style="font-family: 'Pretendard', sans-serif; font-size: 2rem; margin-bottom: 24px;">네모의 세상</h1>
+    <form method="post">
+      <div class="mb-4">
+        <label for="userid" class="form-label text-start d-block">아이디</label>
+        <input type="text" name="userid" class="form-control" id="userid" required>
+      </div>
+      <div class="mb-4">
+        <label for="password" class="form-label text-start d-block">비밀번호</label>
+        <input type="password" name="password" class="form-control" id="password" required>
+      </div>
+      <button type="submit" class="btn btn-login w-100 mt-2">로그인</button>
+    </form>
+    <p class="text-center mt-4" style="font-size: 17px;">
+      계정이 없으신가요? <a href="{{ url_for('register') }}">회원가입</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  function startLoginTransition() {
+    const circle = document.getElementById("circleAnim");
+    const avatar = document.getElementById("avatarImage");
+    const colors = ['#E6C69B', '#DE8E6D', '#E5E9D2', '#98AA84', '#53594D'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    circle.style.backgroundColor = randomColor;
+    circle.classList.add("circle-expand");
+
+    avatar.style.transition = "none";
+    avatar.style.transform = "none";
+
+    setTimeout(() => {
+      document.querySelector(".login-intro-container").style.display = "none";
+      document.getElementById("loginFormWrapper").style.display = "flex";
+    }, 1200);
+  }
+</script>
+{% endblock %}

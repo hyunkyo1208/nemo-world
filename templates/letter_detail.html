@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="letter-detail">
+  <div class="paper" id="capture-area" style="--letter-color: {{ letter.color }}">
+
+    <div class="overlay">
+      <div class="header">
+        <div>to. {{ '익명' if letter.is_anonymous else letter.sender.username }}</div>
+        <div class="date">{{ letter.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+      </div>
+
+      <div class="message">{{ letter.message }}</div>
+
+      {% if letter.comment %}
+        <div class="separator"></div>
+        <div class="comment-text">{{ letter.comment }}</div>
+      {% endif %}
+
+      <div class="avatar-display" id="avatar-icon"></div>
+    </div>
+  </div>
+
+  <!-- ✅ Bootstrap 아이콘으로 변경한 아이콘 버튼 -->
+  {% if letter.comment %}
+  <div class="icon-actions">
+    <button onclick="downloadImage()" title="스토리 저장">
+      <i class="bi bi-download" style="font-size: 1.5rem;"></i>
+    </button>
+    <a href="{{ url_for('profile', user_id=letter.receiver_id) }}" title="목록으로">
+      <i class="bi bi-person" style="font-size: 1.5rem;"></i>
+    </a>
+  </div>
+  {% endif %}
+
+  {% if current_user.id == letter.receiver_id %}
+  <div class="actions">
+    <form method="post" action="{{ url_for('toggle_letter_visibility', letter_id=letter.id) }}">
+      <button type="submit" class="toggle">
+        {{ '공개→' if not letter.is_public else '비공개→' }}
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if current_user.id == letter.receiver_id and not letter.comment %}
+  <form method="post" class="comment-box">
+    <label>댓글 남기기 💬</label>
+    <textarea name="comment" rows="2" placeholder="짧은 댓글을 남겨보세요" required></textarea>
+    <button type="submit">댓글 등록</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+  function downloadImage() {
+    const area = document.getElementById("capture-area");
+    html2canvas(area).then(canvas => {
+      const link = document.createElement("a");
+      link.download = "letter.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const iconDiv = document.getElementById("avatar-icon");
+    let url = "";
+    let color = "{{ letter.color }}";
+
+    {% if not letter.is_public %}
+      url = "/static/icons/qlrhdro.svg";
+    {% elif letter.is_anonymous %}
+      url = "/static/icons/profile.svg";
+    {% else %}
+      url = "/static/avatars/{{ letter.sender.avatar_filename }}";
+      color = "{{ letter.sender.avatar_color }}";
+    {% endif %}
+
+    fetch(url)
+      .then(res => res.text())
+      .then(svg => {
+        const colored = svg.replace(/#D9D9D9|#FFFFFF/gi, color);
+        iconDiv.innerHTML = colored;
+      });
+  });
+</script>
+{% endblock %}
